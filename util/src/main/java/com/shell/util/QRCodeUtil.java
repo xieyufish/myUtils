@@ -7,7 +7,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,201 +21,249 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 /**
- * @author shell
- * 二维码工具
+ * @author shell 二维码工具
  */
 public class QRCodeUtil {
-	// 二维码包含图片的像素宽度
-	private static final int NESTED_IMAGE_WIDTH = 80;
 
-	// 二维码包含图片的像素高度
-	private static final int NESTED_IMAGE_HEIGHT = 80;
-
-	// 二维码包含图片的宽度的一半
-	private static final int NESTED_IMAGE_HALF_WIDTH = NESTED_IMAGE_WIDTH / 2;
-
-	// 二维码包含图片时，图片的外边距
-	private static final int NESTED_IMAGE_MARGIN = 0;
-
-	// 二维码内边距(会占4个像素)
-	private static final int MATRIX_MARGIN = 1;
-
-	// 二维码的像素宽度
-	private static final int MATRIX_WIDTH = 350;
-
-	// 二维码的像素高度
-	private static final int MATRIX_HEIGHT = 350;
-
-	// 二维码的宽度的一半
-	private static final int MATRIX_HALF_WIDTH = MATRIX_WIDTH / 2;
-
-	// 二维码的高度的一半
-	private static final int MATRIX_HALF_HEIGHT = MATRIX_HEIGHT / 2;
-
-	// 二维码包含信息的编码方式
-	private static final String CODE_CHARACTER_SET = "utf-8";
-
-	// 生成的图片文件的格式
-	private static final String FILE_EXTENDS = "png";
-
-	/**
-	 * 将二维码图片保存
-	 * 
-	 * @param content
-	 *            二维码包含的信息
-	 * @param width
-	 *            二维码的宽度
-	 * @param height
-	 *            二维码的高度
-	 * @param srcImage
-	 *            二维码的包含的图片文件
-	 * @param destImage
-	 *            生成的二维码图片的保存文件
-	 */
-	public void encode(String content, File destImage) {
-		try {
-			BufferedImage bufferedImage = createQrCode(content, null,null);
-			ImageIO.write(bufferedImage, FILE_EXTENDS, destImage);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private int width;
+	private int height;
+	private String imageType;
+	private Color color;
+	private int nestImageWidth;
+	private int nestImageHeight;
+	private int nestImagePadding;
+	
+	public int getWidth() {
+	
+		return width;
 	}
+
 	
+	public void setWidth(int width) {
 	
-	/** 
-	 * 初始化生成二维码参数 
-	 */
-	private static Map<EncodeHintType, Object> initHint() {
-		Map<EncodeHintType, Object> hint = new HashMap<EncodeHintType, Object>();
-		hint.put(EncodeHintType.CHARACTER_SET, CODE_CHARACTER_SET);
-		hint.put(EncodeHintType.MARGIN, MATRIX_MARGIN);
-		hint.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
-		
+		this.width = width;
+	}
+
+	
+	public int getHeight() {
+	
+		return height;
+	}
+
+	
+	public void setHeight(int height) {
+	
+		this.height = height;
+	}
+
+	
+	public String getImageType() {
+	
+		return imageType;
+	}
+
+	
+	public void setImageType(String imageType) {
+	
+		this.imageType = imageType;
+	}
+
+	
+	public Color getColor() {
+	
+		return color;
+	}
+
+	
+	public void setColor(Color color) {
+	
+		this.color = color;
+	}
+
+	
+	public int getNestImageWidth() {
+	
+		return nestImageWidth;
+	}
+
+	
+	public void setNestImageWidth(int nestImageWidth) {
+	
+		this.nestImageWidth = nestImageWidth;
+	}
+
+	
+	public int getNestImageHeight() {
+	
+		return nestImageHeight;
+	}
+
+	
+	public void setNestImageHeight(int nestImageHeight) {
+	
+		this.nestImageHeight = nestImageHeight;
+	}
+
+	
+	public int getNestImagePadding() {
+	
+		return nestImagePadding;
+	}
+
+	
+	public void setNestImagePadding(int nestImagePadding) {
+	
+		this.nestImagePadding = nestImagePadding;
+	}
+
+	
+	public static Map<EncodeHintType, Object> getHint() {
+	
 		return hint;
 	}
-	
-	public static BufferedImage createQrCode(String content) {
-		return createQrCode(content, null, null);
-	}
 
 	/**
-	 * 生成二维码图片
-	 * 
-	 * @param content
-	 *            二维码图片所要携带的信息
-	 * @param width
-	 *            二维码图片的宽度
-	 * @param height
-	 *            二维码图片的高度
-	 * @param srcImage
-	 *            放在二维码中的图片文件
+	 * 二维码点阵的生成配置
+	 */
+	private static final Map<EncodeHintType, Object> hint = new HashMap<>();
+
+	static {
+		hint.put(EncodeHintType.CHARACTER_SET, "utf-8");
+		hint.put(EncodeHintType.MARGIN, 1);
+		hint.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
+	}
+	
+	/**
+	 * 创建配置颜色的二维码图片
+	 * @param info
 	 * @return
 	 * @throws WriterException
-	 * @throws IOException
 	 */
-	public static BufferedImage createQrCode(String content, String path, Color color) {
+	public Image create(String info) throws WriterException {
 
-		BufferedImage srcImage = null;
-		int[][] srcPixels = null;
-		BitMatrix matrix = null;
-		
-		
-		if (path != null && path.trim().length() != 0 && !new File(path).isDirectory() && new File(path).exists()) {
-			srcImage = scale(path, NESTED_IMAGE_WIDTH,
-					NESTED_IMAGE_HEIGHT, true);
-			
-			// 如果二维码有包含图片，读取图片的颜色值
-			int width = srcImage.getWidth();
-			int height = srcImage.getHeight();
-			srcPixels = new int[width][height];
-			for (int i = 0; i < width; i++) {
-				for (int j = 0; j < height; j++) {
-					srcPixels[i][j] = srcImage.getRGB(i, j);
-				}
-			}
-		}
+		return create(info, this.color);
+	}
+	
+	/**
+	 * 创建指定颜色的二维码图片
+	 * @param info
+	 * @param color
+	 * @return
+	 * @throws WriterException
+	 */
+	public Image create(String info, Color color) throws WriterException {
 		
 		if (color == null) {
-			color = Color.black;
+			color = this.color;
 		}
-		
 		// 生成二维码矩阵
 		MultiFormatWriter mutiWriter = new MultiFormatWriter();
-		Map<EncodeHintType, Object> hint = initHint();
-		try {
-			matrix = mutiWriter.encode(content, BarcodeFormat.QR_CODE,
-					MATRIX_WIDTH, MATRIX_HEIGHT, hint);
-		} catch (WriterException e) {
-			e.printStackTrace();
+		BitMatrix matrix = mutiWriter.encode(info, BarcodeFormat.QR_CODE, this.width,
+				this.height, hint);
+
+		int[] pixels = new int[this.width * this.height];
+
+		for (int y = 0; y < this.height; y++) {
+			for (int x = 0; x < this.width; x++) {
+				pixels[y * this.width + x] = matrix.get(x, y) ? color.getRGB()
+						: Color.WHITE.getRGB();
+			}
 		}
 
-		int[] pixels = new int[MATRIX_WIDTH * MATRIX_HEIGHT];
+		BufferedImage image = new BufferedImage(this.width, this.height,
+				BufferedImage.TYPE_INT_RGB);
+		image.getRaster().setDataElements(0, 0, this.width, this.height, pixels);
+		return image;
+	}
+	
+	private int[][] getPixels(BufferedImage image) {
+		int width = image.getWidth();
+		int height = image.getHeight();
+		int[][] srcPixels = new int[width][height];
+		for (int i = 0; i < width; i++) {
+			for (int j = 0; j < height; j++) {
+				srcPixels[i][j] = image.getRGB(i, j);
+			}
+		}
+		return srcPixels;
+	}
+	
+	/**
+	 * 创建包含图片的二维码
+	 * @param info
+	 * @param nestImageFile 图片文件
+	 * @return
+	 * @throws WriterException 
+	 * @throws IOException 
+	 */
+	public Image create(String info, File nestImageFile) throws WriterException, IOException {
+		
+		if (nestImageFile == null) {
+			return create(info);
+		}
+		
+		BufferedImage nestImage = ImageIO.read(nestImageFile);
+		BufferedImage srcImage = scale(nestImage, this.nestImageWidth, this.nestImageHeight, true);
+		int[][] srcPixels = getPixels(srcImage);
 
-		int nestImageLeftX = MATRIX_HALF_WIDTH - NESTED_IMAGE_HALF_WIDTH;
-		int nestImageRightX = MATRIX_HALF_WIDTH + NESTED_IMAGE_HALF_WIDTH;
-		int nestImageBottomY = MATRIX_HALF_HEIGHT - NESTED_IMAGE_HALF_WIDTH;
-		int nestImageTopY = MATRIX_HALF_HEIGHT + NESTED_IMAGE_HALF_WIDTH;
+		// 生成二维码矩阵
+		BitMatrix matrix = new MultiFormatWriter().encode(info, BarcodeFormat.QR_CODE, this.width,
+					this.height, hint);
 
-		int nestImageMarginLeftX = nestImageLeftX - NESTED_IMAGE_MARGIN;
-		int nestImageMarginRightX = nestImageRightX + NESTED_IMAGE_MARGIN;
-		int nestImageMarginBottomY = nestImageBottomY - NESTED_IMAGE_MARGIN;
-		int nestImageMarginTopY = nestImageTopY + NESTED_IMAGE_MARGIN;
+		int[] pixels = new int[this.width * this.height];
 
-		for (int y = 0; y < MATRIX_HEIGHT; y++) {
-			for (int x = 0; x < MATRIX_WIDTH; x++) {
-				if (srcImage != null) {
-					if (x > nestImageLeftX && x < nestImageRightX
-							&& y > nestImageBottomY && y < nestImageTopY) {
-						pixels[y * MATRIX_WIDTH + x] = srcPixels[x
-								- nestImageLeftX][y - nestImageBottomY];
-					} else if ((y >= nestImageMarginBottomY && y <= nestImageMarginTopY)
-							&& ((x >= nestImageMarginLeftX && x <= nestImageLeftX) || (x >= nestImageRightX && x <= nestImageMarginRightX))) {
-						pixels[y * MATRIX_WIDTH + x] = Color.white.getRGB();
-					} else if ((x >= nestImageLeftX && x <= nestImageRightX)
-							&& ((y >= nestImageMarginBottomY && y <= nestImageBottomY) || (y >= nestImageTopY && y <= nestImageMarginTopY))) {
-						pixels[y * MATRIX_WIDTH + x] = Color.white.getRGB();
-					} else {
-						pixels[y * MATRIX_WIDTH + x] = matrix.get(x, y) ? color
-								.getRGB() : Color.white.getRGB();
-					}
+		int nestImageLeftX = (this.width - this.nestImageWidth) / 2;
+		int nestImageRightX = nestImageLeftX + this.nestImageWidth;
+		int nestImageBottomY = (this.height - this.nestImageHeight) / 2;
+		int nestImageTopY = nestImageBottomY + this.nestImageHeight;
+
+		int nestImageMarginLeftX = nestImageLeftX - this.nestImagePadding;
+		int nestImageMarginRightX = nestImageRightX + this.nestImagePadding;
+		int nestImageMarginBottomY = nestImageBottomY - this.nestImagePadding;
+		int nestImageMarginTopY = nestImageTopY + this.nestImagePadding;
+
+		for (int y = 0; y < this.height; y++) {
+			for (int x = 0; x < this.width; x++) {
+				if (x > nestImageLeftX && x < nestImageRightX && y > nestImageBottomY
+						&& y < nestImageTopY) {
+					pixels[y * this.width + x] = srcPixels[x - nestImageLeftX][y
+							- nestImageBottomY];
+				} else if ((y >= nestImageMarginBottomY && y <= nestImageMarginTopY)
+						&& ((x >= nestImageMarginLeftX && x <= nestImageLeftX)
+								|| (x >= nestImageRightX
+										&& x <= nestImageMarginRightX))) {
+					pixels[y * this.width + x] = Color.white.getRGB();
+				} else if ((x >= nestImageLeftX && x <= nestImageRightX)
+						&& ((y >= nestImageMarginBottomY && y <= nestImageBottomY)
+								|| (y >= nestImageTopY
+										&& y <= nestImageMarginTopY))) {
+					pixels[y * this.width + x] = Color.white.getRGB();
 				} else {
-					pixels[y * MATRIX_WIDTH + x] = matrix.get(x, y) ? color
-							.getRGB() : Color.white.getRGB();
+					pixels[y * this.width + x] = matrix.get(x, y) ? this.color.getRGB()
+							: Color.white.getRGB();
 				}
 			}
 		}
 
-		BufferedImage image = new BufferedImage(MATRIX_WIDTH, MATRIX_HEIGHT,
+		BufferedImage image = new BufferedImage(this.width, this.height,
 				BufferedImage.TYPE_INT_RGB);
-		image.getRaster().setDataElements(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT,
-				pixels);
+		image.getRaster().setDataElements(0, 0, this.width, this.height, pixels);
 		return image;
 	}
-
 
 	/**
 	 * 把传入的原始图像按高度和宽度进行缩放，生成符合要求的图标
 	 * 
-	 * @param srcImageFile
-	 *            源文件地址
-	 * @param height
-	 *            目标高度
-	 * @param width
-	 *            目标宽度
-	 * @param hasFiller
-	 *            比例不对时是否需要补白：true为补白; false为不补白;
+	 * @param srcImageFile 源文件地址
+	 * @param height 目标高度
+	 * @param width 目标宽度
+	 * @param hasFiller 比例不对时是否需要补白：true为补白; false为不补白;
 	 * @throws IOException
 	 */
-	private static BufferedImage scale(String path, int width,
-			int height, boolean hasFiller) {
-		
+	private static BufferedImage scale(BufferedImage srcImage, int width, int height,
+			boolean hasFiller) {
+
 		double ratio = 0.0;
-		BufferedImage srcImage = null;
-		try {
-			srcImage = ImageIO.read(new FileInputStream(new File(path)));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
 		int srcImageHeight = srcImage.getHeight();
 		int srcImageWidth = srcImage.getWidth();
@@ -238,11 +285,9 @@ public class QRCodeUtil {
 			Graphics2D graphic = image.createGraphics();
 			graphic.setColor(Color.white);
 			graphic.fillRect(0, 0, width, height);
-			graphic.drawImage(destImage,
-					(width - destImage.getWidth(null)) / 2,
-					(height - destImage.getHeight(null)) / 2,
-					destImage.getWidth(null), destImage.getHeight(null),
-					Color.white, null);
+			graphic.drawImage(destImage, (width - destImage.getWidth(null)) / 2,
+					(height - destImage.getHeight(null)) / 2, destImage.getWidth(null),
+					destImage.getHeight(null), Color.white, null);
 			graphic.dispose();
 			destImage = image;
 		}
